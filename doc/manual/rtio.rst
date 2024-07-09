@@ -142,7 +142,7 @@ Sequence errors
 
 A sequence error occurs when a sequence of coarse timestamps cannot be transferred to the gateware. Internally, the gateware stores output events in an array of FIFO buffers (the 'lanes'). Within each particular lane, the coarse timestamps of events must be strictly increasing. 
 
-If an event with a timestamp coarsely equal to or lesser than the previous timestamp is submitted, *or* if the current lane is nearly full, the scaleable event dispatcher (SED) selects the next lane, wrapping around once the final lane is reached. If this lane also contains an event with a timestamp equal to or beyond the one being submitted, the placement fails and a sequence error occurs. 
+If an event with a timestamp coarsely equal to or lesser than the previous timestamp is submitted, the scaleable event dispatcher (SED) selects the next lane, wrapping around once the final lane is reached. If this lane also contains an event with a timestamp equal to or beyond the one being submitted, the placement fails and a sequence error occurs. 
 
 .. note:: 
   For performance reasons, unlike :class:`~artiq.coredevice.exceptions.RTIOUnderflow`, most gateware errors do not halt execution of the kernel, because the kernel cannot wait for potential error reports before continuing. As a result, sequence errors are not raised as exceptions and cannot be caught. Instead, the offending event -- in this case, the event that could not be queued -- is discarded, the experiment continues, and the error is reported in the core log. To check the core log, use the command ``artiq_coremgmt log``.  
