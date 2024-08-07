@@ -43,14 +43,6 @@ device_db = {
     },
 
     # Controllers
-    "lda": {
-        "type": "controller",
-        "best_effort": True,
-        "host": "::1",
-        "port": 3253,
-        "command": "aqctl_lda -p {port} --bind {bind} --simulation"
-    },
-
     "camera_sim": {
         "type": "controller",
         "host": "::1",
