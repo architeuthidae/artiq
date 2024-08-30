@@ -47,7 +47,7 @@
 
 % PERIPHERALS (SLOW)
 
-\matrix[peripheral](peri-slow) at (0, 15.75)
+\matrix[peripheral](peri-slow) at (0, 16.75)
 {
   \node[label] (label){Peripherals (slow)};\\
   \node [splits, rectangle split parts = 4](slow-list){
@@ -60,7 +60,7 @@
 
 % OTHER MACHINES
 
-\matrix[pc](comtools) at (6.38, 15.75)
+\matrix[pc](comtools) at (6.38, 16.75)
 {
     \node [splits, rectangle split parts = 3](remote-ctlrs){
     \nodepart{one} Controller
@@ -72,9 +72,9 @@
   }; \\
 };
 
-\node[anchor = north west] (label) at (11, 16) {Client machines, NB: see footnote 1.};
+\node[anchor = north west] (label) at (11, 17) {Client machines, NB: see footnote 1.};
 
-\matrix[pc](clients) at (10.75, 15)
+\matrix[pc](clients) at (10.75, 16)
 {
    \node[single, draw=rtm, solid](remote-repo) {Cloned repository};
    \&
@@ -87,19 +87,21 @@
 
 % HOST MACHINE
 
-\matrix[host](host-machine) at (0, 11)
+\matrix[host](host-machine) at (0, 12)
 {
-      \node[font=\tt, single](browser) {artiq\_browser};
-      \&
+      \& 
       \node[single, master](results){Results};
-      \&
-      \node[splits, rectangle split parts = 2, master](master) {
-        \nodepart[font=\bf]{one} ARTIQ master
-        \nodepart{two} Datasets
-      };
-      \&
+      \& 
+      \node[single, master, font=\bf](master) {ARTIQ master};
+      \& 
       \node [single, master](repo){Repository};
       \&
+
+      \\
+      \node[font=\tt, single](browser) {artiq\_browser};
+      \& \&
+      \node[single, master](datasets){Dataset database};
+      \& \&
       \node[font=\tt, single, master](ctlmgr) {artiq\_ctlmgr};
       \\
 
@@ -172,19 +174,21 @@
 \draw[network, dashed] (remote-ctlmgr.west) -| +(-0.5, -1) -| (master.120);
 
 % client
-\draw[git] (remote-repo.south) -- +(0, -1) -| (repo.110);
+\draw[git] (remote-repo) -- (repo);
 \draw[network] (remote-client.south) -- +(0, -1.5) -| (master.90);
 \draw[network] (remote-client.two east) -- +(0.7, 0) |- (builtin.east);
 
 %host
-\draw[direct] (browser) -- (results);
+\draw[direct] (browser.north) |- (results.west);
 
 %master
-\draw[direct] (results) -- (master);
-\draw[direct] (master) -- (ddb);
+\draw[direct] (results.east) |- (master.west);
+\draw[direct] (master.310) |- +(1.5, -0.25) |- +(1, -1.75) -| (ddb.north);
+\draw[direct] (master.south) -- (datasets.north);
 \draw[direct] (master) -- (repo);
 
 \draw[direct] (run) -- (ddb);
+\draw[direct] (run.north) |- (datasets.west);
 \draw[direct] (coremgmt) -- (ddb);
 
 % ctlmgr
@@ -194,7 +198,7 @@
 % core connections
 \draw[jtag] (flash.south) |- +(1, -1) -| (core.125);
 \draw[network] (run.south) |- +(1, -0.75) -| (core.110);
-\draw[network] (master.230) |- +(-1.25, -0.25) |- +(0, -2) -| (core.north);
+\draw[network] (master.230) |- +(-1.5, -0.25) |- +(0, -3.5) -| (core.north);
 \draw[network] (coremgmt.south) |- +(-0.75, -0.75) -| (core.70);
 \draw[network] (builtin.south) |- +(-2, -1.1) -| (core.55);
 %rtio
