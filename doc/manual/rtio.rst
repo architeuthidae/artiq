@@ -1,10 +1,10 @@
 ARTIQ Real-Time I/O concepts
 ============================
 
-ARTIQ's Real-Time Input/Output design is cruncial to its ability to achieve nanosecond-level high timing resolution and microsecond-scale low latency. These concepts explain:
+ARTIQ's Real-Time Input/Output design is crucial to its ability to achieve nanosecond-level high timing resolution and microsecond-scale low latency. These concepts explain:
 
-* how commands are scheduled and executed in ARTIQ
-* the abstractions used in ARTIQ-Python code
+* how commands are scheduled and executed in ARTIQ;
+* the abstractions used in ARTIQ-Python code;
 * the common mistakes and errors that can occur when using the system.
 
 In a typical lab environment, two very different classes of hardware need to be controlled. One class is the vast arsenal of diverse laboratory hardware which interfaces with and is controlled from a typical PC. The other is specialized real-time hardware that requires tight coupling and a low-latency interface to a CPU. ARTIQ extends the flexibility of the second class of hardware, yielding precise, deterministic control while utilizing a dialect of Python as its control language. To accomplish these goals, ARTIQ code is composed of two types of "programs":
@@ -13,7 +13,7 @@ In a typical lab environment, two very different classes of hardware need to be 
   2. ARTIQ :term:`kernels<kernel>`, executed on a *core device* (an FPGA-based device, usually Kasli or Kasli-SoC).
 
 .. tip::
-  This section features a glossary, which can be found by scrolling to the very bottom of the page. Certain words throughout will be linked directly to their glossary definitions for ease of access.
+  This section features a glossary for ARTIQ-specific terms, which can be found by scrolling to the very bottom of the page.
 
 The core device contains a CPU which has direct access to specialized programmable I/O timing logic, part of the *gateware.* This CPU does not send control signals to the real-time hardware directly; that would lead to imprecise, indeterminate, and generally unpredictable timing. Instead, the CPU operates at one end of a bank of FIFO (first in, first out) buffers, effectively queueing up :term:`events <output event>` to be 'fired' by the gateware at predetermined timestamps. A similar bank of FIFOs exists for :term:`input events <input event>`, storing data and timestamps for events recorded by the gateware until read out by the CPU at the other end.
 
@@ -55,12 +55,12 @@ In this example, the timeline cursor starts at 7000 mu, so the TTL rising edge i
 ..  note::
   The ARTIQ ``mu``, or :term:`machine unit`, represents the maximum resolution of RTIO timing in an ARTIQ system. Its exact duration depends on the reference period of the system, and may be changed by the user, but normally corresponds to one nanosecond.
 
-It is important to understand that output events are *not* executed when they are processed by the CPU. Rather, they will be fired (that is, sent out from the core device's connections to real-time hardware) when the :term:`wall clock`, the *real-world time*, reaches the timestamp they were scheduled for. Meanwhile, the CPU may have progressed to an entrely different kernel or experiment. By moving the timeline cursor along the timeline programmatically, output events can be precisely scheduled without being dependent on the slow, inconsistent timings of CPU processing.
+It is important to understand that output events are *not* executed when they are processed by the CPU. Rather, they will be fired (that is, sent out from the core device's connections to real-time hardware) when the :term:`wall clock`, the *real-world time*, reaches the timestamp they were scheduled for. Meanwhile, the CPU may have progressed to an entrely different kernel. By moving the timeline cursor along the timeline programmatically, output events can be precisely scheduled without being dependent on the slow, inconsistent timings of CPU processing.
 
 Slack
 -----
 
-In the course of an experiment, the value of the timeline cursor may sometimes be ahead of the wall clock, sometimes behind. The difference between the timeline cursor and the wall clock time is called :term:`slack`. If the timeline cursor is ahead of the wall clock, this is called *positive slack*; if the timeline cursor is behind the wall clock, this is called *negative slack*.
+In the course of an :term:`experiment`, the value of the timeline cursor may sometimes be ahead of the wall clock, sometimes behind. The difference between the timeline cursor and the wall clock time is called :term:`slack`. If the timeline cursor is ahead of the wall clock, this is called *positive slack*; if the timeline cursor is behind the wall clock, this is called *negative slack*.
 
 Revisiting the same timing diagram:
 
@@ -86,7 +86,7 @@ Revisiting the same timing diagram:
 
 The wall clock is represented by ``rtio_counter_mu``. In this example, the wall clock time starts at 2600, giving the experiment 4400 mu of positive slack. The three instructions take time to process and schedule, so the wall clock advances to 3200, but by this time the timeline cursor has also increased, resulting in a slack of 5800 mu. Later, when the wall clock reaches 7000 and 9000, the scheduled RTIO events are fired with precise timing.
 
-It is quite obvious that a RTIO output event can only be scheduled for a timestamp in the future, that is, it can only be scheduled when the experiment is in a state of *positive slack.* Attempting to schedule an event for a timestamp in the past produces a RTIO :ref:`underflow <rtio-underflow>` exception.
+It is quite obvious that a RTIO output event can only be scheduled for a timestamp in the future. That is, it can only be scheduled when the experiment is in a state of *positive slack.* Attempting to schedule an event for a timestamp in the past produces a :ref:`RTIO underflow <rtio-underflow>` exception.
 
 Input channels and events
 -------------------------
@@ -101,11 +101,11 @@ Input channels channels detect input events, timestamp them, and place them in a
 More specifically, the :meth:`~artiq.coredevice.ttl.TTLInOut.gate_rising` method marks out a period of time during which rising edges on the ``input`` TTL are recorded as input events. The beginning of this period is set by the timeline cursor (i.e. it begins at ``now_mu``) and the timeline cursor is advanced by its duration (i.e., it places ``now_mu`` at the end of the 500 ns window).
 
 .. note::
-  Since :meth:`~artiq.coredevice.ttl.TTLInOut.gate_rising` cannot set a listening period retrospectively, ``now_mu`` must be in the future; the kernel must begin in a state of positive slack.
+  Since :meth:`~artiq.coredevice.ttl.TTLInOut.gate_rising` cannot mark a listening period retrospectively, ``now_mu`` must be in the future; the kernel must begin in a state of positive slack.
 
-The :meth:`~artiq.coredevice.ttl.TTLInOut.count` method unloads the input buffers and counts the input events present, up until the timestamp given as a parameter. Notably, this inherently requires *waiting for the wall clock to catch up to the time given,* for the simple reason that it's impossible to count input events which haven't happened yet. Since the parameter given is ``now_mu`` (the end of the listening period which was just defined), after :meth:`~artiq.coredevice.ttl.TTLInOut.count` the kernel is in a state of negative slack.
+The :meth:`~artiq.coredevice.ttl.TTLInOut.count` method unloads the input buffers and counts the input events present, up until the timestamp given as a parameter. Notably, this inherently requires *waiting for the wall clock to catch up to the time given,* for the simple reason that it's impossible to count input events which haven't happened yet. Since the parameter given is ``now_mu`` (the end of the listening period which was just defined), after :meth:`~artiq.coredevice.ttl.TTLInOut.count` the kernel is in a state of negative slack. A 2 µs delay, however, is long enough to restore positive slack, making it possible to schedule an output pulse.
 
-A 2 µs delay, however, is long enough to restore positive slack, making it possible to schedule an output pulse. The sequence is illustrated in the diagram below.
+The sequence is illustrated in the diagram below.
 
 .. wavedrom::
 
@@ -131,10 +131,10 @@ A 2 µs delay, however, is long enough to restore positive slack, making it poss
 
 \
 
-RTIO buffers are finite, and can be filled up if input events are never collected. This produces a RTIO :ref:`overflow <rtio-overflows>` exception.
+RTIO buffers are finite, and can be filled up if input events are never collected. Attempting to read an event from a buffer which has been overfilled throws a :ref:`RTIO overflow <rtio-overflows>` exception.
 
 .. note::
-  It is not possible to provoke a :class:`~artiq.coredevice.exceptions.RTIOOverflow` on a RTIO output channel. While output buffers are also of finite size, the CPU will simply stall the submission of further events until there is once again space to do so. See :ref:`overflow <rtio-overflows>` for more details.
+  It is not possible to provoke a :class:`~artiq.coredevice.exceptions.RTIOOverflow` on a RTIO output channel. While output buffers are also of finite size, the CPU will simply stall the submission of further events until there is once again space to do so. See :ref:`rtio-overflows` for more details.
 
 .. _rtio-handover-synchronization:
 
@@ -180,15 +180,13 @@ the first kernel ``k1`` exits and returns to the host method, which calls a seco
 
 \
 
-To enable this kind of seamless handover, no mechanism forces ``k1`` to wait for all its output events to have fired before exiting. In general, a kernel is permitted to exit long before the events it has submitted are executed. This is normally preferable: it frees up resources to the next kernel and allows work to be carried on without interruptions.
+It should be carefully noted that, to enable this kind of seamless handover, ``k1`` exits well before all its delays have passed. In fact, a kernel is permitted to exit before *any* events it has submitted are executed. This is generally preferable: it frees up resources to the next kernel and allows work to be carried on without interruptions.
 
-However, on the other hand, **no guarantees** are made about the state of the RTIO system when a new kernel enters. Slack may be positive, negative, or zero. Input channels might be filled to overflowing, or empty. Output channels might contain events still being executed, or scheduled to execute in the far future, or no events at all. Unexpected negative slack can cause :class:`RTIOUnderflows<artiq.coredevice.exceptions.RTIOUnderflow>`. Unexpected large positive slack can make a system appear 'locked', as all its events are scheduled for a distant future and the CPU stalls waiting for buffers to be emptied.
+However, on the other hand, **no guarantees** are made about the state of the RTIO system when a new kernel enters. Slack may be positive, negative, or zero. Input channels might be filled to overflowing, or empty. Output channels might contain events still being executed, or scheduled to execute in the far future, or no events at all. Unexpected negative slack can cause :class:`~artiq.coredevice.exceptions.RTIOUnderflow` exceptions. Unexpected large positive slack can make a system appear 'locked', as all its events are scheduled for a distant future and the CPU stalls waiting for buffers to be emptied.
 
-As a result, when beginning a new experiment, we often want to clear the RTIO FIFOs and initialize the timeline cursor to a reasonable point in the near future. The method :meth:`core.reset()<artiq.coredevice.core.Core.reset>` is provided for this purpose. The example idle kernel implements this mechanism.
+As a result, when beginning a new experiment, we often want to clear the RTIO FIFOs and initialize the timeline cursor to a reasonable point in the near future. The method :meth:`core.reset()<artiq.coredevice.core.Core.reset>` is provided for this purpose.
 
-Correspondingly, if a kernel exits while some of its events are still waiting to be executed, there is no guarantee made that the events in question ever *will* be executed (as opposed to being flushed out by a subsequent core reset).
-
-If a kernel *should* wait until all its events have been executed, use the method :meth:`core.wait_until_mu()<artiq.coredevice.core.Core.wait_until_mu>` with a timestamp after (or at) the last event:
+Correspondingly, if a kernel exits while some of its events are still waiting to be executed, there is no guarantee made that the events in question ever *will* be executed (as opposed to being flushed out by a subsequent core reset). If a kernel *should* wait until all its events have been executed, use the method :meth:`core.wait_until_mu()<artiq.coredevice.core.Core.wait_until_mu>` with a timestamp after (or at) the last event:
 
 .. wavedrom::
 
@@ -210,9 +208,11 @@ If a kernel *should* wait until all its events have been executed, use the metho
 
 \
 
-In many cases, :meth:`~artiq.language.core.now_mu` will return an appropriate timestamp::
+.. tip:: 
 
-  self.core.wait_until_mu(now_mu())
+  In many cases, :meth:`~artiq.language.core.now_mu` will return an appropriate timestamp::
+
+    self.core.wait_until_mu(now_mu())
 
 Output errors and exceptions
 ----------------------------
@@ -248,7 +248,7 @@ To track down recurring :class:`~artiq.coredevice.exceptions.RTIOUnderflow` exce
 Sequence errors
 ^^^^^^^^^^^^^^^
 
-A sequence error occurs when a sequence of coarse timestamps cannot be transferred to the gateware. Internally, the gateware stores output events in an array of FIFO buffers (the 'lanes'). Within each particular lane, the :term:`coarse timestamps` of events must be strictly increasing.
+A sequence error occurs when a sequence of :term:`coarse timestamps` cannot be transferred to the gateware. Internally, the gateware stores output events in an array of FIFO buffers (the 'lanes'). Within each particular lane, the coarse timestamps of events must be strictly increasing.
 
 If an event with a timestamp coarsely equal to or lesser than the previous timestamp is submitted, *or* if the current lane is nearly full, the scaleable event dispatcher (SED) selects the next lane, wrapping around once the final lane is reached. If all lanes contain an event with a timestamp equal to or later than the one being submitted, placement fails and a sequence error occurs.
 
@@ -262,7 +262,7 @@ It is also possible to increase the number of SED lanes in the gateware, which w
 Other notes:
 
 * Strictly increasing (coarse) timestamps never cause sequence errors.
-* Strictly increasing *fine* timestamps within the same coarse cycle may still cause sequence errors.
+* Strictly increasing :term:`fine timestamps` within the same coarse cycle may still cause sequence errors.
 * The number of lanes is a hard limit on the number of RTIO output events that may be emitted within one coarse cycle.
 * Zero-duration methods (such as :meth:`~artiq.coredevice.ttl.TTLOut.on()`) do not advance the timeline and so will always consume additional lanes if they are scheduled simultaneously. Adding a delay of at least one coarse RTIO cycle will prevent this (e.g. ``delay_mu(np.int64(self.core.ref_multiplier))``).
 * Whether a particular sequence of timestamps causes a sequence error or not is fully deterministic (starting from a known RTIO state, e.g. after a reset). Adding a constant offset to the sequence will not affect the result.
@@ -282,7 +282,7 @@ Like sequence errors, collisions originate in gateware and do not stop the execu
 Busy errors
 ^^^^^^^^^^^
 
-A busy error occurs when at least one output event could not be executed because the output channel was already busy executing an event. This differs from a collision error in that a collision is triggered when a sequence of events overwhelms *communication* with a channel, and a busy error is triggered when *execution* is overwhelmed. Busy errors are only possible in the context of single events with execution times longer than a coarse RTIO clock cycle; the exact parameters will depend on the nature of the output channel (e.g. the specific peripheral device).
+A busy error occurs when at least one output event could not be executed because the output channel was already busy executing an event. This differs from a collision error in that a collision is triggered when a sequence of events overwhelms *communication* with a channel, and a busy error is triggered when *execution* is overwhelmed. Busy errors are only possible in the context of single events with execution times longer than a cycle of the :term:`coarse RTIO clock`; the exact parameters will depend on the nature of the output channel (e.g. the specific peripheral device).
 
 Offending event(s) are discarded and the problem is reported asynchronously via the core log.
 
@@ -321,8 +321,6 @@ This will change where and when sequence errors occur in your kernels, and might
 .. note::
   Event spreading can be particularly helpful in DRTIO satellites, as it is the space remaining in the *fullest* FIFO that is used as a metric for when the satellite can receive more data from the master. The setting is not system-wide and can and must be set independently for each core device in a system. In other words, to enable or disable event spreading in satellites, flash the satellite core configuration directly; this will have no effect on any other satellites or the master.
 
-.. _rtio-coarse-fine:
-
 Cursor and timestamps
 ---------------------
 
@@ -332,10 +330,14 @@ Absolute timestamps can be large numbers. They are represented internally by 64-
 
 Both the wall clock and the timeline cursor are initialized to zero at core device boot time and continue uninterrupted otherwise.
 
-.. note::
-  Absolute timestamps are also referred to as *RTIO fine timestamps,* because they run on a significantly finer resolution than the timestamps of the so-called *coarse RTIO clock,* the actual clocking signal provided to or generated by the core device. The frequency of the coarse RTIO clock is set by the core device :ref:`clocking settings <core-device-clocking>` but is most commonly 125MHz, which corresponds to eight one-nanosecond machine units per coarse RTIO cycle.
+.. _rtio-coarse-fine:
 
-  The *coarse timestamp* of an event is its timestamp as according to the lower resolution of the coarse clock.   It is in practice a truncated version of the fine timestamp. In general, ARTIQ offers *precision* on the fine level, but *operates* at the coarse level; this is rarely relevant to the user, but understanding it may clarify the behavior of some RTIO issues (e.g. sequence errors).
+Coarse and fine clocks
+^^^^^^^^^^^^^^^^^^^^^^
+
+Absolute timestamps are also referred to as *RTIO fine timestamps,* because they run on a significantly finer resolution than the timestamps of the so-called *coarse RTIO clock,* the actual clocking signal provided to or generated by the core device. The frequency of the coarse RTIO clock is set by the core device :ref:`clocking settings <core-device-clocking>` but is most commonly 125MHz, which corresponds to eight one-nanosecond machine units per coarse RTIO cycle.
+
+The *coarse timestamp* of an event is its timestamp as according to the lower resolution of the coarse clock.   It is in practice a truncated version of the fine timestamp. In general, ARTIQ offers *precision* on the fine level, but *operates* at the coarse level; this is rarely relevant to the user, but understanding it may clarify the behavior of some RTIO issues (e.g. sequence errors).
 
   .. Related: https://github.com/m-labs/artiq/issues/1237
 
@@ -377,7 +379,7 @@ Glossary
     The actual clocking signal provided to or by the core device. Varies depending on user settings but most commonly run at 125MHz.
 
   Coarse timestamps
-    Timestamps according to the coarse clock.
+    Timestamps according to the coarse clock. See also :ref:`rtio-coarse-fine`.
 
   Fine timestamps
     Timestamps according to the full timing resolution of ARTIQ. See also :ref:`rtio-coarse-fine`.
